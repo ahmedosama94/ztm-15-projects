@@ -1,5 +1,9 @@
 use clap::Parser;
 
+// TODO: Add backslash escaped characters support
+// const ALERT_BELL: char = '\x07';
+// const BACKSPACE: char = '\x08';
+
 const LONG_ABOUT: &str = "
 Write arguments to the standard output.
 
@@ -16,4 +20,14 @@ pub struct EchoArgs {
 
     #[arg(value_name = "arg ...")]
     pub value: String,
+}
+
+impl EchoArgs {
+    pub fn exec(&self) {
+        if self.disable_new_line {
+            print!("{}", self.value);
+        } else {
+            println!("{}", self.value);
+        }
+    }
 }
