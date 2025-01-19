@@ -25,45 +25,11 @@ impl LsCommand {
         self.all || self.almost_all
     }
 
-    fn get_permissions_string(&self, metadata: &Metadata) -> String {
-        let mut string = String::new();
+    fn process_blocks(total_blocks: Option<u64>, blocks: u64) -> Option<u64> {
+        let total_blocks_so_far = match total_blocks { Some(v) => v, None => 0 };
 
-        string.push(if metadata.is_dir() { 'd' } else { '-' });
-
-        let mode = metadata.permissions().mode() % 512;
-        let first_part = mode / 64;
-        let second_part = mode % 64 / 8;
-        let third_part = mode % 8;
-
-        string.push_str(&self.get_permissions_substring(first_part));
-        string.push_str(&self.get_permissions_substring(second_part));
-        string.push_str(&self.get_permissions_substring(third_part));
-
-        string
-    }
-
-    fn get_permissions_substring(&self, mode_part: u32) -> String {
-        let mut output = String::new();
-
-        if mode_part & (1 << 2) > 0 {
-            output.push('r');
-        } else {
-            output.push('-');
-        }
-
-        if mode_part & (1 << 1) > 0 {
-            output.push('w');
-        } else {
-            output.push('-');
-        }
-
-        if mode_part & 1 > 0 {
-            output.push('x');
-        } else {
-            output.push('-');
-        }
-
-        output
+        // block count is returned in 512 byte blocks but linux counts 1024 size blocks, so divided by 2
+        Some(total_blocks_so_far + blocks / 2)
     }
 
     pub fn exec(&self) -> Result<LsOuptut> {
@@ -77,8 +43,26 @@ impl LsCommand {
         let mut total_blocks = None;
         let mut output = Vec::new();
         if self.all {
-            output.push(LsEntry::new(".".blue(), None));
-            output.push(LsEntry::new("..".blue(), None));
+            let current_dir_extra = if self.long_format {
+                let metadata = fs::metadata(".")?;
+                total_blocks = Self::process_blocks(total_blocks, metadata.st_blocks());
+
+                Some(LsEntryExtra::from(metadata)?)
+            } else {
+                None
+            };
+
+            let parent_dir_extra = if self.long_format {
+                let metadata = fs::metadata("..")?;
+                total_blocks = Self::process_blocks(total_blocks, metadata.st_blocks());
+
+                Some(LsEntryExtra::from(metadata)?)
+            } else {
+                None
+            };
+
+            output.push(LsEntry::new(".".blue(), current_dir_extra));
+            output.push(LsEntry::new("..".blue(), parent_dir_extra));
         }
 
         for entry in dir {
@@ -92,19 +76,9 @@ impl LsCommand {
 
             let extra = if self.long_format {
                 let metadata = entry.metadata()?;
-                let total_blocks_so_far = match total_blocks { Some(v) => v, None => 0 };
+                total_blocks = Self::process_blocks(total_blocks, metadata.st_blocks());
 
-                // block count is returned in 512 byte blocks but linux counts 1024 size blocks, so divided by 2
-                total_blocks = Some(total_blocks_so_far + (metadata.st_blocks() / 2));
-
-                Some(LsEntryExtra::new(
-                    self.get_permissions_string(&metadata),
-                    metadata.st_nlink(),
-                    get_user_by_uid(metadata.st_uid()),
-                    get_group_by_gid(metadata.st_gid()),
-                    metadata.st_size(),
-                    metadata.modified()?,
-                ))
+                Some(LsEntryExtra::from(metadata)?)
             } else {
                 None
             };
@@ -218,6 +192,57 @@ pub struct LsEntryExtra {
 impl LsEntryExtra {
     pub fn new(metadata: String, links: u64, user: Option<User>, group: Option<Group>, size: u64, modified: SystemTime) -> Self {
         LsEntryExtra { metadata, links, user, group, size, modified }
+    }
+
+    pub fn from(metadata: Metadata) -> Result<Self> {
+        Ok(LsEntryExtra::new(
+            Self::get_permissions_string(&metadata),
+            metadata.st_nlink(),
+            get_user_by_uid(metadata.st_uid()),
+            get_group_by_gid(metadata.st_gid()),
+            metadata.st_size(),
+            metadata.modified()?,
+        ))
+    }
+    fn get_permissions_string(metadata: &Metadata) -> String {
+        let mut string = String::new();
+
+        string.push(if metadata.is_dir() { 'd' } else { '-' });
+
+        let mode = metadata.permissions().mode() % 512;
+        let first_part = mode / 64;
+        let second_part = mode % 64 / 8;
+        let third_part = mode % 8;
+
+        string.push_str(&Self::get_permissions_substring(first_part));
+        string.push_str(&Self::get_permissions_substring(second_part));
+        string.push_str(&Self::get_permissions_substring(third_part));
+
+        string
+    }
+
+    fn get_permissions_substring(mode_part: u32) -> String {
+        let mut output = String::new();
+
+        if mode_part & (1 << 2) > 0 {
+            output.push('r');
+        } else {
+            output.push('-');
+        }
+
+        if mode_part & (1 << 1) > 0 {
+            output.push('w');
+        } else {
+            output.push('-');
+        }
+
+        if mode_part & 1 > 0 {
+            output.push('x');
+        } else {
+            output.push('-');
+        }
+
+        output
     }
 
     pub fn metadata(&self) -> &str {
