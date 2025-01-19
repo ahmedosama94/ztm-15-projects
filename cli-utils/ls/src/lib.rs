@@ -65,7 +65,7 @@ impl LsCommand {
     }
 
     pub fn exec(&self) -> Result<LsOuptut> {
-        let mut dir: Vec<_> = fs::read_dir(&self.path).unwrap().collect();
+        let mut dir: Vec<_> = fs::read_dir(&self.path)?.collect();
         dir.sort_by(|a, b| {
             a.as_ref().clone().unwrap().file_name().cmp(&b.as_ref().clone().unwrap().file_name())
         });
@@ -80,7 +80,7 @@ impl LsCommand {
         }
 
         for entry in dir {
-            let entry = entry.unwrap();
+            let entry = entry?;
 
             let file_or_dir_name = entry.file_name().into_string().unwrap();
 
@@ -100,7 +100,7 @@ impl LsCommand {
                 None
             };
 
-            let file_or_dir_name = if entry.file_type().unwrap().is_dir() {
+            let file_or_dir_name = if entry.file_type()?.is_dir() {
                 file_or_dir_name.blue()
             } else {
                 file_or_dir_name.white()
