@@ -14,7 +14,7 @@ const ABOUT: &str = "echo: echo [-neE] [arg ...]";
 
 #[derive(Parser, Debug)]
 #[command(version = "0.0.0", about = ABOUT, long_about = LONG_ABOUT)]
-pub struct EchoArgs {
+pub struct EchoCommand {
     #[arg(short = 'n', help = "do not append a newline")]
     pub disable_new_line: bool,
 
@@ -22,12 +22,12 @@ pub struct EchoArgs {
     pub value: String,
 }
 
-impl EchoArgs {
-    pub fn exec(&self) {
+impl EchoCommand {
+    pub fn exec(&self) -> String {
         if self.disable_new_line {
-            print!("{}", self.value);
+            format!("{}", self.value)
         } else {
-            println!("{}", self.value);
+            format!("{}\n", self.value)
         }
     }
 }

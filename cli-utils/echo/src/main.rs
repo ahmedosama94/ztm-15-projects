@@ -1,8 +1,9 @@
 use clap::Parser;
-use echo::EchoArgs;
+use echo::EchoCommand;
 
 fn main() {
-    let args = EchoArgs::parse();
+    let args = EchoCommand::parse();
+    let output = args.exec();
 
-    args.exec();
+    print!("{}", output);
 }
