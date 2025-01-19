@@ -1,16 +1,21 @@
 use clap::Parser;
-use ls::LsCommand;
 use color_eyre::eyre::Result;
+use ls::LsCommand;
 
 fn main() -> Result<()> {
+
     let cmd = LsCommand::parse();
 
     let output = cmd.exec()?;
-    if let Some(total_blocks) = output.total_blocks() {
-        println!("total {}", total_blocks);
+    if let Some(total_blocks_str) = output.total_blocks_str() {
+        println!("{}", total_blocks_str);
     }
 
-    let max_str_length = format!("{}", output.max_size()).len();
+    let max_str_length = if cmd.human_readable() {
+        4
+    } else {
+        format!("{}", output.max_size()).len()
+    };
 
     for (idx, entry) in output.entries().iter().enumerate() {
         if let Some(extra) = entry.extra() {

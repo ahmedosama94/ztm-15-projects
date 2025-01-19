@@ -8,4 +8,5 @@ chrono = "0.4.39"
 clap = { version = "4.5.26", features = ["derive"] }
 color-eyre = "0.6.3"
 colored = "3.0.0"
+numfmt = "1.1.1"
 users = "0.11.0"
