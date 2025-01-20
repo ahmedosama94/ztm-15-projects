@@ -3,7 +3,6 @@ use color_eyre::eyre::Result;
 use ls::LsCommand;
 
 fn main() -> Result<()> {
-
     let cmd = LsCommand::parse();
 
     let output = cmd.exec()?;

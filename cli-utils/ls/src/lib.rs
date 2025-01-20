@@ -2,7 +2,14 @@ use chrono::{DateTime, Local};
 use colored::{ColoredString, Colorize};
 use numfmt::{Formatter, Numeric, Precision, Scales};
 use std::{
-    fmt::Debug, fs::{self, Metadata}, io::Result, os::{linux::fs::MetadataExt, unix::fs::PermissionsExt}, time::{SystemTime, UNIX_EPOCH}
+    fmt::Debug,
+    fs::{self, DirEntry, Metadata},
+    io::Result,
+    os::{
+        linux::fs::MetadataExt,
+        unix::fs::{FileTypeExt, PermissionsExt},
+    },
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use clap::Parser;
@@ -98,7 +105,7 @@ impl LsCommand {
         for entry in dir {
             let entry = entry?;
 
-            let file_or_dir_name = entry.file_name().into_string().unwrap();
+            let file_or_dir_name = get_colorize_file_name(&entry)?;
 
             if !self.almost_all() && file_or_dir_name.starts_with(".") {
                 continue;
@@ -113,16 +120,15 @@ impl LsCommand {
                 None
             };
 
-            let file_or_dir_name = if entry.file_type()?.is_dir() {
-                file_or_dir_name.blue()
-            } else {
-                file_or_dir_name.white()
-            };
-
             output.push(LsEntry::new(file_or_dir_name, extra));
         }
 
-        Ok(LsOuptut::new(total_blocks, output, separator, self.human_readable))
+        Ok(LsOuptut::new(
+            total_blocks,
+            output,
+            separator,
+            self.human_readable,
+        ))
     }
 }
 
@@ -136,17 +142,19 @@ pub struct LsOuptut<'a> {
 }
 
 impl<'a> LsOuptut<'a> {
-    fn new(total_blocks: Option<u64>, entries: Vec<LsEntry>, separator: &'a str, human_readable: bool) -> Self {
+    fn new(
+        total_blocks: Option<u64>,
+        entries: Vec<LsEntry>,
+        separator: &'a str,
+        human_readable: bool,
+    ) -> Self {
         Self {
             total_blocks,
             entries,
             separator,
             human_readable,
             step_1_formatter: Formatter::new()
-                .scales(Scales::new(
-                    1024,
-                    vec![" K", " M", " G", " T", " P"],
-                ).unwrap())
+                .scales(Scales::new(1024, vec![" K", " M", " G", " T", " P"]).unwrap())
                 .precision(Precision::Significance(4)),
             step_2_formatter: Formatter::new().precision(Precision::Significance(2)),
         }
@@ -179,19 +187,20 @@ impl<'a> LsOuptut<'a> {
     }
 
     pub fn total_blocks_str(&self) -> Option<String> {
-    if let Some(total_blocks) = self.total_blocks() {
-        return Some(format!("total {}",
-            if self.human_readable {
-                format_value(
-                    self.step_1_formatter.clone(),
-                    self.step_2_formatter.clone(),
-                    total_blocks,
-                )
-            } else {
-                format!("{}", total_blocks)
-            }
-        ));
-    }
+        if let Some(total_blocks) = self.total_blocks() {
+            return Some(format!(
+                "total {}",
+                if self.human_readable {
+                    format_value(
+                        self.step_1_formatter.clone(),
+                        self.step_2_formatter.clone(),
+                        total_blocks,
+                    )
+                } else {
+                    format!("{}", total_blocks)
+                }
+            ));
+        }
 
         None
     }
@@ -274,10 +283,7 @@ impl LsEntryExtra {
             modified,
             human_readable,
             step_1_formatter: Formatter::new()
-                .scales(Scales::new(
-                    1024,
-                    vec!["", " K", " M", " G", " T", " P"],
-                ).unwrap())
+                .scales(Scales::new(1024, vec!["", " K", " M", " G", " T", " P"]).unwrap())
                 .precision(Precision::Significance(4)),
             step_2_formatter: Formatter::new().precision(Precision::Significance(2)),
         }
@@ -397,7 +403,11 @@ impl LsEntryExtra {
     }
 }
 
-fn format_value<T: Numeric>(mut step_1_formatter: Formatter, mut step_2_formatter: Formatter, value: T) -> String {
+fn format_value<T: Numeric>(
+    mut step_1_formatter: Formatter,
+    mut step_2_formatter: Formatter,
+    value: T,
+) -> String {
     let formatted_size = step_1_formatter.fmt2(value);
 
     let split = formatted_size.split(" ");
@@ -417,9 +427,23 @@ fn format_value<T: Numeric>(mut step_1_formatter: Formatter, mut step_2_formatte
         size.ceil()
     };
 
-    format!(
-        "{}{}",
-        step_2_formatter.fmt2(size),
-        unit_str,
-    )
+    format!("{}{}", step_2_formatter.fmt2(size), unit_str,)
+}
+
+fn get_colorize_file_name(entry: &DirEntry) -> Result<ColoredString> {
+    let mut file_name = entry.file_name().into_string().unwrap();
+    if file_name.contains(" ") {
+        file_name = format!("'{}'", file_name);
+    }
+    let file_type = entry.file_type()?;
+
+    if file_type.is_dir() {
+        Ok(file_name.blue())
+    } else if file_type.is_symlink() {
+        Ok(file_name.cyan())
+    } else if file_type.is_block_device() || file_type.is_char_device() {
+        Ok(file_name.yellow().on_black())
+    } else {
+        Ok(file_name.white())
+    }
 }
