@@ -39,19 +39,18 @@ impl FindCommand {
     }
 }
 
-const SEPARATOR: &str = "\n";
 pub struct FindCommandResult {
     entries: Vec<String>,
 }
 
 impl FindCommandResult {
     pub fn new(entries: Vec<String>) -> Self {
-        FindCommandResult { entries }
+        Self { entries }
     }
 }
 
 impl Display for FindCommandResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.entries.join(SEPARATOR))
+        write!(f, "{}", self.entries.join("\n"))
     }
 }
