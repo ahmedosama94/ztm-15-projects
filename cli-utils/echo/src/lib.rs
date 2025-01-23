@@ -32,6 +32,22 @@ pub struct EchoCommand {
 }
 
 impl EchoCommand {
+    pub fn parse_octal(output_str: &mut String, octal_val: &mut String) -> Result<()> {
+        let ch = u8::from_str_radix(&octal_val, 8)?;
+        output_str.push(ch as char);
+        octal_val.clear();
+
+        Ok(())
+    }
+
+    pub fn parse_hex(output_str: &mut String, hex_val: &mut String) -> Result<()> {
+        let ch = u8::from_str_radix(&hex_val, 16)?;
+        output_str.push(ch as char);
+        hex_val.clear();
+
+        Ok(())
+    }
+
     pub fn exec(&self) -> Result<EchoCommandResult> {
         let mut output_str = String::new();
         let mut previous_backslash = false;
@@ -45,9 +61,7 @@ impl EchoCommand {
                 octal_val.push(ch);
 
                 if octal_val.len() >= 3 {
-                    let ch = u8::from_str_radix(&octal_val, 8)?;
-                    output_str.push(ch as char);
-                    octal_val = String::new();
+                    Self::parse_octal(&mut output_str, &mut octal_val)?;
                 }
 
                 continue;
@@ -57,8 +71,7 @@ impl EchoCommand {
                 hex_val.push(ch);
 
                 if hex_val.len() >= 2 {
-                    let ch = u8::from_str_radix(&hex_val, 16)?;
-                    output_str.push(ch as char);
+                    Self::parse_hex(&mut output_str, &mut hex_val)?;
                 }
 
                 continue;
@@ -95,6 +108,22 @@ impl EchoCommand {
             }
 
             output_str.push(ch);
+        }
+
+        if octal {
+            if octal_val.len() >= 1 {
+                Self::parse_octal(&mut output_str, &mut octal_val)?;
+            } else {
+                output_str.push_str("\\0");
+            }
+        }
+
+        if hex {
+            if hex_val.len() >= 1 {
+                Self::parse_hex(&mut output_str, &mut hex_val)?;
+            } else {
+                output_str.push_str("\\x");
+            }
         }
 
         if !self.disable_new_line {
