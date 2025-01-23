@@ -1,10 +1,14 @@
-use std::fmt::Display;
+use std::{char, fmt::Display};
+use color_eyre::Result;
 
 use clap::Parser;
 
 // TODO: Add backslash escaped characters support
-// const ALERT_BELL: char = '\x07';
-// const BACKSPACE: char = '\x08';
+const ALERT_BELL: char = '\x07';
+const BACKSPACE: char = '\x08';
+const ESCAPE: char = '\x1B';
+const LINE_FEED: char = '\x0A';
+const VERTICAL_TAB: char = '\x0B';
 
 const LONG_ABOUT: &str = "
 Write arguments to the standard output.
@@ -20,18 +24,84 @@ pub struct EchoCommand {
     #[arg(short = 'n', help = "do not append a newline")]
     pub disable_new_line: bool,
 
+    #[arg(short = 'e', help = "enable interpretation of backslash escapes")]
+    pub enable_escaping: bool,
+
     #[arg(value_name = "arg ...")]
     pub value: String,
 }
 
 impl EchoCommand {
-    pub fn exec(&self) -> EchoCommandResult {
-        let mut output_str = String::from(&self.value);
+    pub fn exec(&self) -> Result<EchoCommandResult> {
+        let mut output_str = String::new();
+        let mut previous_backslash = false;
+        let mut octal = false;
+        let mut octal_val = String::new();
+        let mut hex = false;
+        let mut hex_val = String::new();
+
+        for ch in self.value.chars() {
+            if octal {
+                octal_val.push(ch);
+
+                if octal_val.len() >= 3 {
+                    let ch = u8::from_str_radix(&octal_val, 8)?;
+                    output_str.push(ch as char);
+                    octal_val = String::new();
+                }
+
+                continue;
+            }
+
+            if hex {
+                hex_val.push(ch);
+
+                if hex_val.len() >= 2 {
+                    let ch = u8::from_str_radix(&hex_val, 16)?;
+                    output_str.push(ch as char);
+                }
+
+                continue;
+            }
+
+            if previous_backslash {
+                match ch {
+                    'a' => output_str.push(ALERT_BELL),
+                    'b' => output_str.push(BACKSPACE),
+                    'c' => return Ok(EchoCommandResult::new(output_str)),
+                    'e' => output_str.push(ESCAPE),
+                    'f' => output_str.push(LINE_FEED),
+                    'n' => output_str.push('\n'),
+                    'r' => output_str.push('\r'),
+                    't' => output_str.push('\t'),
+                    'v' => output_str.push(VERTICAL_TAB),
+                    '0' => octal = true,
+                    'x' => hex = true,
+                    _ => {
+                        output_str.push('\\');
+                        output_str.push(ch);
+                    }
+                }
+
+                previous_backslash = false;
+                continue;
+            }
+
+            previous_backslash = false;
+
+            if ch == '\\' {
+                previous_backslash = true;
+                continue;
+            }
+
+            output_str.push(ch);
+        }
+
         if !self.disable_new_line {
             output_str.push('\n');
         }
 
-        EchoCommandResult::new(output_str)
+        Ok(EchoCommandResult::new(output_str))
     }
 }
 
