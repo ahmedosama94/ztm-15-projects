@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use clap::Parser;
 
 // TODO: Add backslash escaped characters support
@@ -23,11 +25,28 @@ pub struct EchoCommand {
 }
 
 impl EchoCommand {
-    pub fn exec(&self) -> String {
-        if self.disable_new_line {
-            format!("{}", self.value)
-        } else {
-            format!("{}\n", self.value)
+    pub fn exec(&self) -> EchoCommandResult {
+        let mut output_str = String::from(&self.value);
+        if !self.disable_new_line {
+            output_str.push('\n');
         }
+
+        EchoCommandResult::new(output_str)
+    }
+}
+
+pub struct EchoCommandResult {
+    echo_val: String,
+}
+
+impl EchoCommandResult {
+    pub fn new(echo_val: String) -> Self {
+        Self { echo_val }
+    }
+}
+
+impl Display for EchoCommandResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.echo_val)
     }
 }
