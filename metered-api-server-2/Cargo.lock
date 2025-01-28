@@ -986,6 +986,7 @@ dependencies = [
  "color-eyre",
  "dotenv",
  "hex",
+ "log",
  "rand 0.9.0",
  "serde",
  "sqlx",

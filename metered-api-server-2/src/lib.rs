@@ -1,5 +1,7 @@
+use axum::extract::FromRef;
 use serde::{de::Visitor, Deserialize, Serialize};
-use validator::{Validate, ValidationErrors};
+use sqlx::{Pool, Sqlite};
+use validator::{Validate, ValidationError, ValidationErrors};
 
 pub enum Response<T: Serialize> {
     Success(T),
@@ -23,7 +25,35 @@ impl<T: Serialize> Serialize for Response<T> {
 #[derive(Validate)]
 pub struct Registration {
     #[validate(email(message = "Incorrect email format"))]
-    pub email: String,
+    email: String,
+}
+
+impl Registration {
+    pub fn email(&self) -> &str {
+        &self.email
+    }
+
+    pub async fn validate_email_uniqueness(
+        &self,
+        db_pool: &Pool<Sqlite>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match sqlx::query_as::<_, ApiKeyRow>("SELECT id FROM api_keys WHERE email = $1 LIMIT 1")
+            .bind(self.email())
+            .fetch_optional(db_pool)
+            .await
+        {
+            // TODO: Investigate ColumnNotFound error reason
+            Err(_) => Err(Self::create_validation_error().into()),
+            Ok(option) => match option {
+                Some(_) => Err(Self::create_validation_error().into()),
+                None => Ok(()),
+            },
+        }
+    }
+
+    fn create_validation_error() -> ValidationError {
+        ValidationError::new("email_already_in_use").with_message("Email already in use".into())
+    }
 }
 
 impl<'de> Deserialize<'de> for Registration {
@@ -153,5 +183,26 @@ impl InternalServerErrorDto {
         Self {
             error: String::from("Internal server error"),
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct ApiState {
+    db_pool: Pool<Sqlite>,
+}
+
+impl ApiState {
+    pub fn new(db_pool: Pool<Sqlite>) -> Self {
+        Self { db_pool }
+    }
+
+    pub fn db_pool(&self) -> &Pool<Sqlite> {
+        &self.db_pool
+    }
+}
+
+impl FromRef<ApiState> for Pool<Sqlite> {
+    fn from_ref(api_state: &ApiState) -> Self {
+        api_state.db_pool().clone()
     }
 }
