@@ -1,0 +1,15 @@
+[package]
+name = "metered-api-server-2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.8.1", features = ["http2", "macros"] }
+color-eyre = "0.6.3"
+dotenv = "0.15.0"
+hex = "0.4.3"
+rand = "0.9.0"
+serde = { version = "1.0.217", features = ["derive"] }
+sqlx = { version = "0.8.3", features = ["migrate", "runtime-tokio", "sqlite"] }
+tokio = { version = "1.43.0", features = ["full"] }
+validator = { version = "0.20.0", features = ["derive"] }
