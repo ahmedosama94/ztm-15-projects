@@ -4,14 +4,14 @@ use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::{
     api::Response,
-    data::{ApiKeyDto, InternalServerErrorDto, RegistrationDto},
+    data::{InternalServerErrorDto, RegistrationInputDto, RegistrationResponseDto},
     services::api_keys_service,
 };
 
 pub async fn register(
     State(pool): State<Pool<Sqlite>>,
-    Json(registration_data): Json<RegistrationDto>,
-) -> (StatusCode, Json<Response<ApiKeyDto>>) {
+    Json(registration_data): Json<RegistrationInputDto>,
+) -> (StatusCode, Json<Response<RegistrationResponseDto>>) {
     if let Err(err) = registration_data.validate() {
         return (
             StatusCode::BAD_REQUEST,
@@ -40,7 +40,7 @@ pub async fn register(
 
     match api_keys_service::create_api_key_row(&pool, registration_data.email()).await {
         Ok(api_key_row) => {
-            let api_key_dto = ApiKeyDto::new(api_key_row.email().to_owned());
+            let api_key_dto = RegistrationResponseDto::new(api_key_row.api_key().to_owned());
 
             (StatusCode::CREATED, Json(Response::Success(api_key_dto)))
         }

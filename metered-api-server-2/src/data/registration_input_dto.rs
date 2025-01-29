@@ -5,12 +5,12 @@ use validator::{Validate, ValidationError};
 use crate::db::models::ApiKeyRow;
 
 #[derive(Validate)]
-pub struct RegistrationDto {
+pub struct RegistrationInputDto {
     #[validate(email(message = "Incorrect email format"))]
     email: String,
 }
 
-impl RegistrationDto {
+impl RegistrationInputDto {
     pub fn email(&self) -> &str {
         &self.email
     }
@@ -38,7 +38,7 @@ impl RegistrationDto {
     }
 }
 
-impl<'de> Deserialize<'de> for RegistrationDto {
+impl<'de> Deserialize<'de> for RegistrationInputDto {
     fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -79,7 +79,7 @@ impl<'de> Deserialize<'de> for RegistrationDto {
         struct RegistrationVisitor;
 
         impl<'de> Visitor<'de> for RegistrationVisitor {
-            type Value = RegistrationDto;
+            type Value = RegistrationInputDto;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("struct Registration")
@@ -95,7 +95,7 @@ impl<'de> Deserialize<'de> for RegistrationDto {
 
                 let email = email.to_lowercase();
 
-                Ok(RegistrationDto { email })
+                Ok(RegistrationInputDto { email })
             }
 
             fn visit_map<A>(self, mut map: A) -> std::result::Result<Self::Value, A::Error>
@@ -119,7 +119,7 @@ impl<'de> Deserialize<'de> for RegistrationDto {
                     email.ok_or_else(|| serde::de::Error::missing_field("email"))?;
                 let email = email.to_lowercase();
 
-                Ok(RegistrationDto { email })
+                Ok(RegistrationInputDto { email })
             }
         }
 
