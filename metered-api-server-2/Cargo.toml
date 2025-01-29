@@ -1,5 +1,5 @@
 [package]
-name = "metered-api-server-2"
+name = "metered-api-server"
 version = "0.1.0"
 edition = "2021"
 
