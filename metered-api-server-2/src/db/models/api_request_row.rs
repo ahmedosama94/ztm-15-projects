@@ -4,25 +4,25 @@ use sqlx::{
 };
 
 #[derive(FromRow)]
-pub struct ApiKeyRow {
+pub struct ApiRequestRow {
     id: u32,
-    email: String,
-    api_key: String,
+    api_key_id: u32,
+    lines_of_code: u32,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
 
-impl ApiKeyRow {
+impl ApiRequestRow {
     pub fn id(&self) -> u32 {
         self.id
     }
 
-    pub fn email(&self) -> &str {
-        &self.email
+    pub fn api_key_id(&self) -> u32 {
+        self.api_key_id
     }
 
-    pub fn api_key(&self) -> &str {
-        &self.api_key
+    pub fn lines_of_code(&self) -> u32 {
+        self.lines_of_code
     }
 
     pub fn created_at(&self) -> DateTime<Utc> {

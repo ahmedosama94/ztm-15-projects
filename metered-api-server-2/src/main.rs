@@ -16,8 +16,9 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(handlers::welcome))
-        .route("/register", post(handlers::register))
         .route("/api-keys", get(handlers::list_api_keys))
+        .route("/register", post(handlers::register))
+        .route("/run-code", post(handlers::run_code))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;

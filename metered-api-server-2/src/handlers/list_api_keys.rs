@@ -10,7 +10,7 @@ use crate::{
 pub async fn list_api_keys(
     State(pool): State<Pool<Sqlite>>,
 ) -> (StatusCode, Json<Response<Vec<ApiKeyDto>>>) {
-    match api_keys_service::fetch_all_api_key_rows(&pool).await {
+    match api_keys_service::fetch_all(&pool).await {
         Ok(api_key_rows) => {
             let api_key_dtos = api_key_rows
                 .iter()

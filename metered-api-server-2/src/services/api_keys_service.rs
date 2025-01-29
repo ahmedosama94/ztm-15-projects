@@ -24,12 +24,23 @@ pub async fn create_api_key_row(
     Ok(api_key_row)
 }
 
-pub async fn fetch_all_api_key_rows(
-    pool: &Pool<Sqlite>,
-) -> Result<Vec<ApiKeyRow>, Box<dyn std::error::Error>> {
-    let api_key_rows: Vec<ApiKeyRow> = sqlx::query_as("SELECT id, email, api_key FROM api_keys")
+pub async fn fetch_all(pool: &Pool<Sqlite>) -> Result<Vec<ApiKeyRow>, Box<dyn std::error::Error>> {
+    let api_key_rows: Vec<ApiKeyRow> = sqlx::query_as("SELECT * FROM api_keys")
         .fetch_all(pool)
         .await?;
 
     Ok(api_key_rows)
+}
+
+pub async fn fetch_one_by_api_key(
+    pool: &Pool<Sqlite>,
+    api_key: &str,
+) -> Result<Option<ApiKeyRow>, Box<dyn std::error::Error>> {
+    let api_key_row: Option<ApiKeyRow> =
+        sqlx::query_as("SELECT * FROM api_keys WHERE api_key = $1")
+            .bind(api_key)
+            .fetch_optional(pool)
+            .await?;
+
+    Ok(api_key_row)
 }
