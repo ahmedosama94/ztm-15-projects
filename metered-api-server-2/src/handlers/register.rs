@@ -1,11 +1,11 @@
 use axum::{extract::State, http::StatusCode, Json};
-use rand::RngCore;
 use sqlx::{Pool, Sqlite};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::{
     api::Response,
     data::{ApiKeyDto, InternalServerErrorDto, RegistrationDto},
+    services::api_keys_service,
 };
 
 pub async fn register(
@@ -38,22 +38,12 @@ pub async fn register(
         };
     }
 
-    let email = registration_data.email();
-    let mut bytes = [0; 256];
-    rand::rng().fill_bytes(&mut bytes);
-    let api_key = hex::encode(bytes);
+    match api_keys_service::create_api_key_row(&pool, registration_data.email()).await {
+        Ok(api_key_row) => {
+            let api_key_dto = ApiKeyDto::new(api_key_row.email().to_owned());
 
-    match sqlx::query_as(
-        "INSERT INTO api_keys
-        (email, api_key) VALUES ($1, $2)
-        RETURNING api_key",
-    )
-    .bind(&email)
-    .bind(&api_key)
-    .fetch_one(&pool)
-    .await
-    {
-        Ok(api_key_dto) => (StatusCode::CREATED, Json(Response::Success(api_key_dto))),
+            (StatusCode::CREATED, Json(Response::Success(api_key_dto)))
+        }
         Err(_) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(Response::ServerError(InternalServerErrorDto::new())),

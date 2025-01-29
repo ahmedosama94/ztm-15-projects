@@ -1,4 +1,6 @@
-#[derive(sqlx::FromRow)]
+use sqlx::prelude::FromRow;
+
+#[derive(FromRow)]
 pub struct ApiKeyRow {
     id: u32,
     email: String,
