@@ -1,0 +1,12 @@
+[package]
+name = "metered-api-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dotenv = "0.15.0"
+hex = "0.4.3"
+rand = "0.8.5"
+sqlx = { version = "0.8.3", features = ["migrate", "runtime-tokio", "sqlite", "tls-native-tls"] }
+tokio = { version = "1.43.0", features = ["full"] }
+warp = "0.3.7"
