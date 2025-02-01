@@ -4,3 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+unit-converter-macro = { path = "unit-converter-macro" }
+unit-converter-macro-derive = { path = "unit-converter-macro/unit-converter-macro-derive" }

@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use unit_converter_macro_derive::{FromCelsius, FromFahrenheit, FromKelvin};
+
 use crate::{DimensionUnit, TypedValue};
 
 pub trait Temperature:
@@ -11,7 +13,7 @@ pub trait Temperature:
 }
 type DefaultTemperatureUnit = TemperatureKelvin;
 
-#[derive(Clone)]
+#[derive(Clone, FromCelsius, FromFahrenheit)]
 pub struct TemperatureKelvin(pub f64);
 
 impl Display for TemperatureKelvin {
@@ -40,7 +42,7 @@ impl DimensionUnit<f64> for TemperatureKelvin {
 
 impl Temperature for TemperatureKelvin {}
 
-#[derive(Clone)]
+#[derive(Clone, FromFahrenheit, FromKelvin)]
 pub struct TemperatureCelsius(pub f64);
 
 impl Display for TemperatureCelsius {
@@ -69,7 +71,7 @@ impl DimensionUnit<f64> for TemperatureCelsius {
 
 impl Temperature for TemperatureCelsius {}
 
-#[derive(Clone)]
+#[derive(Clone, FromCelsius, FromKelvin)]
 pub struct TemperatureFahrenheit(pub f64);
 
 impl Display for TemperatureFahrenheit {
@@ -97,39 +99,3 @@ impl DimensionUnit<f64> for TemperatureFahrenheit {
 }
 
 impl Temperature for TemperatureFahrenheit {}
-
-impl From<TemperatureCelsius> for TemperatureKelvin {
-    fn from(value: TemperatureCelsius) -> Self {
-        Self(Self::from_default(value.to_default()).value())
-    }
-}
-
-impl From<TemperatureFahrenheit> for TemperatureKelvin {
-    fn from(value: TemperatureFahrenheit) -> Self {
-        Self(Self::from_default(value.to_default()).value())
-    }
-}
-
-impl From<TemperatureKelvin> for TemperatureCelsius {
-    fn from(value: TemperatureKelvin) -> Self {
-        Self(Self::from_default(value.to_default()).value())
-    }
-}
-
-impl From<TemperatureFahrenheit> for TemperatureCelsius {
-    fn from(value: TemperatureFahrenheit) -> Self {
-        Self(Self::from_default(value.to_default()).value())
-    }
-}
-
-impl From<TemperatureKelvin> for TemperatureFahrenheit {
-    fn from(value: TemperatureKelvin) -> Self {
-        Self(Self::from_default(value.to_default()).value())
-    }
-}
-
-impl From<TemperatureCelsius> for TemperatureFahrenheit {
-    fn from(value: TemperatureCelsius) -> Self {
-        Self(Self::from_default(value.to_default()).value())
-    }
-}
