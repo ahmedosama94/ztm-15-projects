@@ -1,10 +1,11 @@
 use std::ops::Add;
 
 use crate::map_error;
+use crate::FromWithPrefix;
 use crate::UnitPrefix;
 use crate::MULTIPLIER_MAP;
 
-#[derive(Debug)]
+#[derive(Debug, FromWithPrefix)]
 pub struct Temperature {
     value: f64,
 }

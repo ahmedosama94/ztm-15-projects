@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 lazy_static = "1.5.0"
+definitely-not-rink-macro = { path = "definitely-not-rink-macro" }
+definitely-not-rink-macro-derive = { path = "definitely-not-rink-macro/definitely-not-rink-macro-derive" }
