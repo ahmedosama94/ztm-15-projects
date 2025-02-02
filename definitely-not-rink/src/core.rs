@@ -21,30 +21,35 @@ pub enum UnitPrefix {
     Peta,
 }
 
-fn generate_prefix_multiplier_map() -> HashMap<UnitPrefix, f64> {
+pub enum Op {
+    Mult(i128),
+    Div(i128),
+}
+
+fn generate_prefix_multiplier_map() -> HashMap<UnitPrefix, Op> {
     let mut map = HashMap::new();
 
-    map.insert(UnitPrefix::Femto, 1e-15);
-    map.insert(UnitPrefix::Pico, 1e-12);
-    map.insert(UnitPrefix::Nano, 1e-9);
-    map.insert(UnitPrefix::Micro, 1e-6);
-    map.insert(UnitPrefix::Milli, 1e-3);
-    map.insert(UnitPrefix::Centi, 1e-2);
-    map.insert(UnitPrefix::Deci, 1e-1);
-    map.insert(UnitPrefix::None, 1e0);
-    map.insert(UnitPrefix::Deca, 1e1);
-    map.insert(UnitPrefix::Hecto, 1e2);
-    map.insert(UnitPrefix::Kilo, 1e3);
-    map.insert(UnitPrefix::Mega, 1e6);
-    map.insert(UnitPrefix::Giga, 1e9);
-    map.insert(UnitPrefix::Tera, 1e12);
-    map.insert(UnitPrefix::Peta, 1e15);
+    map.insert(UnitPrefix::Femto, Op::Div(1_000_000_000_000_000));
+    map.insert(UnitPrefix::Pico, Op::Div(1_000_000_000_000));
+    map.insert(UnitPrefix::Nano, Op::Div(1_000_000_000));
+    map.insert(UnitPrefix::Micro, Op::Div(1_000_000));
+    map.insert(UnitPrefix::Milli, Op::Div(1000));
+    map.insert(UnitPrefix::Centi, Op::Div(100));
+    map.insert(UnitPrefix::Deci, Op::Div(10));
+    map.insert(UnitPrefix::None, Op::Mult(1));
+    map.insert(UnitPrefix::Deca, Op::Mult(10));
+    map.insert(UnitPrefix::Hecto, Op::Mult(100));
+    map.insert(UnitPrefix::Kilo, Op::Mult(1000));
+    map.insert(UnitPrefix::Mega, Op::Mult(1_000_000));
+    map.insert(UnitPrefix::Giga, Op::Mult(1_000_000_000));
+    map.insert(UnitPrefix::Tera, Op::Mult(1_000_000_000_000));
+    map.insert(UnitPrefix::Peta, Op::Mult(1_000_000_000_000_000));
 
     map
 }
 
 lazy_static! {
-    pub static ref MULTIPLIER_MAP: HashMap<UnitPrefix, f64> = generate_prefix_multiplier_map();
+    pub static ref OPERATION_MAP: HashMap<UnitPrefix, Op> = generate_prefix_multiplier_map();
 }
 
 pub fn map_error(unit_prefix: UnitPrefix) -> String {
