@@ -1,7 +1,7 @@
 use definitely_not_rink::Temperature;
 
 fn main() {
-    let temperature = Temperature::from_fahrenheit(1000.0);
+    let temperature = Temperature::from_fahrenheit(1000.into());
 
-    println!("{:#?}", temperature.kelvin());
+    println!("{:.2}", temperature.to_kelvin());
 }

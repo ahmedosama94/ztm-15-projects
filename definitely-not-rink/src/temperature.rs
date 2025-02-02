@@ -4,8 +4,6 @@ use crate::map_error;
 use crate::UnitPrefix;
 use crate::MULTIPLIER_MAP;
 
-const DEFAULT_PREFIX: UnitPrefix = UnitPrefix::None;
-
 #[derive(Debug)]
 pub struct Temperature {
     value: f64,
@@ -17,59 +15,63 @@ impl Temperature {
     }
 
     pub fn from_kelvin(val: f64) -> Self {
-        Self::from_kelvin_with_prefix(val, None)
+        Self::new(val)
     }
 
-    pub fn from_kelvin_with_prefix(val: f64, unit_prefix: Option<UnitPrefix>) -> Self {
-        let multiplier = if let Some(unit_prefix) = unit_prefix {
-            *MULTIPLIER_MAP.get(&unit_prefix).expect(&map_error(unit_prefix))
-        } else {
-            1.0
-        };
+    pub fn from_kelvin_with_prefix(val: f64, unit_prefix: UnitPrefix) -> Self {
+        let multiplier = *MULTIPLIER_MAP.get(&unit_prefix).expect(&map_error(unit_prefix));
 
-        let default_multiplier = *MULTIPLIER_MAP.get(&DEFAULT_PREFIX).expect(&map_error(DEFAULT_PREFIX));
-        let multiplier = multiplier / default_multiplier;
-
-        let val = (val * multiplier) as f64;
-
-        Temperature::new(val)
+        Self::from_kelvin(val * multiplier)
     }
 
     pub fn from_celsius(val: f64) -> Self {
-        Self::from_celsius_with_prefix(val, None)
+        Self::from_kelvin(val + 273.15)
     }
 
-    pub fn from_celsius_with_prefix(val: f64, unit_prefix: Option<UnitPrefix>) -> Self {
-        let val_kelvin = val + 273.15;
+    pub fn from_celsius_with_prefix(val: f64, unit_prefix: UnitPrefix) -> Self {
+        let multiplier = *MULTIPLIER_MAP.get(&unit_prefix).expect(&map_error(unit_prefix));
 
-        Self::from_kelvin_with_prefix(val_kelvin, unit_prefix)
+        Self::from_celsius(val * multiplier)
     }
 
     pub fn from_fahrenheit(val: f64) -> Self {
-        Self::from_fahrenheit_with_prefix(val, None)
+        Self::from_celsius((val - 32.0) * 5.0 / 9.0)
     }
 
-    pub fn from_fahrenheit_with_prefix(val: f64, unit_prefix: Option<UnitPrefix>) -> Self {
-        let val_celsius = (val - 32.0) * 5.0 / 9.0;
+    pub fn from_fahrenheit_with_prefix(val: f64, unit_prefix: UnitPrefix) -> Self {
+        let multiplier = *MULTIPLIER_MAP.get(&unit_prefix).expect(&map_error(unit_prefix));
 
-        Self::from_celsius_with_prefix(val_celsius, unit_prefix)
+        Self::from_fahrenheit(val * multiplier)
     }
 
-    pub fn kelvin(&self) -> f64 {
-        self.kelvin_with_prefix(None)
+    pub fn to_kelvin(&self) -> f64 {
+        self.value
     }
 
-    pub fn kelvin_with_prefix(&self, unit_prefix: Option<UnitPrefix>) -> f64 {
-        let multiplier = if let Some(unit_prefix) = unit_prefix {
-            *MULTIPLIER_MAP.get(&unit_prefix).expect(&map_error(unit_prefix))
-        } else {
-            1.0
-        };
+    pub fn to_kelvin_with_prefix(&self, unit_prefix: UnitPrefix) -> f64 {
+        let multiplier = *MULTIPLIER_MAP.get(&unit_prefix).expect(&map_error(unit_prefix));
 
-        let default_multiplier = *MULTIPLIER_MAP.get(&DEFAULT_PREFIX).expect(&map_error(DEFAULT_PREFIX));
-        let multiplier = default_multiplier / multiplier;
+        self.to_kelvin() / multiplier
+    }
 
-        (self.value as f64) * multiplier
+    pub fn to_celsius(&self) -> f64 {
+        self.value - 273.15
+    }
+
+    pub fn to_celsius_with_prefix(&self, unit_prefix: UnitPrefix) -> f64 {
+        let multiplier = *MULTIPLIER_MAP.get(&unit_prefix).expect(&map_error(unit_prefix));
+
+        self.to_celsius() / multiplier
+    }
+
+    pub fn to_fahrenheit(&self) -> f64 {
+        ((self.value - 273.15) * 9.0 / 5.0) + 32.0
+    }
+
+    pub fn to_fahrenheit_with_prefix(&self, unit_prefix: UnitPrefix) -> f64 {
+        let multiplier = *MULTIPLIER_MAP.get(&unit_prefix).expect(&map_error(unit_prefix));
+
+        self.to_fahrenheit() / multiplier
     }
 }
 
