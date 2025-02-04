@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
+use derive_more::Display;
 use lazy_static::lazy_static;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
 pub enum UnitPrefix {
     Femto,
     Pico,
@@ -48,5 +49,71 @@ lazy_static! {
 }
 
 pub fn map_error(unit_prefix: UnitPrefix) -> String {
-    format!("Missing unit prefix multiplier for {}", "todo!macro")
+    format!("Missing unit prefix multiplier for {}", unit_prefix)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::map_error;
+    use super::UnitPrefix;
+
+    #[test]
+    fn test_map_error() {
+        assert_eq!(
+            map_error(UnitPrefix::Femto),
+            String::from("Missing unit prefix multiplier for Femto"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Pico),
+            String::from("Missing unit prefix multiplier for Pico"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Nano),
+            String::from("Missing unit prefix multiplier for Nano"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Micro),
+            String::from("Missing unit prefix multiplier for Micro"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Milli),
+            String::from("Missing unit prefix multiplier for Milli"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Centi),
+            String::from("Missing unit prefix multiplier for Centi"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Deci),
+            String::from("Missing unit prefix multiplier for Deci"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::None),
+            String::from("Missing unit prefix multiplier for None"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Deca),
+            String::from("Missing unit prefix multiplier for Deca"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Hecto),
+            String::from("Missing unit prefix multiplier for Hecto"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Kilo),
+            String::from("Missing unit prefix multiplier for Kilo"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Giga),
+            String::from("Missing unit prefix multiplier for Giga"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Tera),
+            String::from("Missing unit prefix multiplier for Tera"),
+        );
+        assert_eq!(
+            map_error(UnitPrefix::Peta),
+            String::from("Missing unit prefix multiplier for Peta"),
+        );
+    }
 }
