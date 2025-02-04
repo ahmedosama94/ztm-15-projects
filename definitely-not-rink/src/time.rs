@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::Add};
+use std::{fmt::Display, ops::{Add, Div, Mul, Sub}};
 
 const YEAR: &str = "year";
 const DAY: &str = "day";
@@ -42,6 +42,38 @@ impl Time {
 
     pub fn from_years(value: f64) -> Self {
         Self::new(value * get_multiplier_for(YEAR))
+    }
+}
+
+impl Add for Time {
+    type Output = Time;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(self.value + rhs.value)
+    }
+}
+
+impl Sub for Time {
+    type Output = Time;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(self.value - rhs.value)
+    }
+}
+
+impl Mul for Time {
+    type Output = Time;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::new(self.value * rhs.value)
+    }
+}
+
+impl Div for Time {
+    type Output = Time;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        Self::new(self.value / rhs.value)
     }
 }
 

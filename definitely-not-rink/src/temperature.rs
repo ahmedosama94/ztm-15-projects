@@ -1,4 +1,7 @@
 use std::ops::Add;
+use std::ops::Div;
+use std::ops::Mul;
+use std::ops::Sub;
 
 use crate::map_error;
 use crate::UnitPrefix;
@@ -80,5 +83,29 @@ impl Add for Temperature {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self::new(self.value + rhs.value)
+    }
+}
+
+impl Sub for Temperature {
+    type Output = Temperature;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(self.value - rhs.value)
+    }
+}
+
+impl Mul for Temperature {
+    type Output = Temperature;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::new(self.value * rhs.value)
+    }
+}
+
+impl Div for Temperature {
+    type Output = Temperature;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        Self::new(self.value / rhs.value)
     }
 }
