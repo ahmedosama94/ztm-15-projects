@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
+use definitely_not_rink_macro_derive::SimpleEnumToString;
 use lazy_static::lazy_static;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, SimpleEnumToString)]
 pub enum UnitPrefix {
     Femto,
     Pico,
