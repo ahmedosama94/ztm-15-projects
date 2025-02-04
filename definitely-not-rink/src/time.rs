@@ -25,7 +25,7 @@ impl Time {
     }
 
     pub fn from_seconds(value: f64) -> Self {
-        Self::new(value)
+        Self::new(value * get_multiplier_for(SECOND))
     }
 
     pub fn from_minutes(value: f64) -> Self {
@@ -42,6 +42,26 @@ impl Time {
 
     pub fn from_years(value: f64) -> Self {
         Self::new(value * get_multiplier_for(YEAR))
+    }
+
+    pub fn to_seconds(&self) -> f64 {
+        self.value / get_multiplier_for(SECOND)
+    }
+
+    pub fn to_minutes(&self) -> f64 {
+        self.value / get_multiplier_for(MINUTE)
+    }
+
+    pub fn to_hours(&self) -> f64 {
+        self.value / get_multiplier_for(HOUR)
+    }
+
+    pub fn to_days(&self) -> f64 {
+        self.value / get_multiplier_for(DAY)
+    }
+
+    pub fn to_years(&self) -> f64 {
+        self.value / get_multiplier_for(YEAR)
     }
 }
 
@@ -175,5 +195,67 @@ mod tests {
         let display = format!("{}", time);
 
         assert_eq!(display, String::from("1 hour, 1 minute and 11 seconds"));
+    }
+
+    #[test]
+    fn test_simple_add() {
+        let v1 = 3.0;
+        let t1 = Time::from_seconds(v1);
+
+        let v2 = 5.0;
+        let t2 = Time::from_seconds(v2);
+
+        assert_eq!((t1 + t2).value, v1 + v2);
+    }
+
+    #[test]
+    fn test_add_with_multiples() {
+        let v1 = 3.0;
+        let t1 = Time::from_hours(v1);
+
+        let v2 = 5.0;
+        let t2 = Time::from_days(v2);
+
+        assert_eq!((t1 + t2).value, v1 * 3600.0 + v2 * 3600.0 * 24.0);
+    }
+
+    #[test]
+    fn test_to_seconds() {
+        let value = 3.0;
+        let time = Time::from_hours(value);
+
+        assert_eq!(time.to_seconds(), 10800.0);
+    }
+
+    #[test]
+    fn test_to_minutes() {
+        let value = 3.0;
+        let time = Time::from_hours(value);
+
+        assert_eq!(time.to_minutes(), 180.0);
+    }
+
+    #[test]
+    fn test_to_hours() {
+        let value = 30.0;
+        let time = Time::from_minutes(value);
+
+        assert_eq!(time.to_hours(), 0.5);
+    }
+
+    #[test]
+    fn test_to_days() {
+        let value = 60.0;
+        let time = Time::from_hours(value);
+
+        assert_eq!(time.to_days(), 2.5);
+    }
+
+    #[test]
+    fn test_to_years() {
+        let value = 438.0;
+        let time = Time::from_days(value);
+
+        assert_eq!(time.to_years(), 1.2);
     }
 }

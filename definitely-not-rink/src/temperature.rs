@@ -13,7 +13,7 @@ pub struct Temperature {
 }
 
 impl Temperature {
-    pub fn new(value: f64) -> Self {
+    fn new(value: f64) -> Self {
         Self { value }
     }
 
@@ -107,5 +107,34 @@ impl Div for Temperature {
 
     fn div(self, rhs: Self) -> Self::Output {
         Self::new(self.value / rhs.value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Temperature;
+
+    #[test]
+    fn test_from_kelvin() {
+        let val = 543.0;
+        let temp = Temperature::from_kelvin(val);
+
+        assert_eq!(temp.value, val);
+    }
+
+    #[test]
+    fn test_from_celsius() {
+        let val = 100.0;
+        let temp = Temperature::from_celsius(val);
+
+        assert_eq!(temp.value, val + 273.15);
+    }
+
+    #[test]
+    fn test_from_fahrenheit() {
+        let val = 5.0;
+        let temp = Temperature::from_fahrenheit(val);
+
+        assert_eq!(temp.value, 258.15);
     }
 }
