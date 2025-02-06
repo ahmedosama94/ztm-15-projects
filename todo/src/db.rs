@@ -49,7 +49,29 @@ pub async fn get_all_todos() -> Result<Vec<TodoItemRow>> {
     Ok(rows)
 }
 
-pub async fn edit_todos(id_and_item_pairs: Vec<(u32, String)>) -> Result<()> {
+pub async fn add_todos(items: &Vec<String>) -> Result<()> {
+    let mut param_num = 1;
+    let mut value_params = Vec::new();
+    for _ in 0..items.len() {
+        value_params.push(format!("(${})", param_num));
+        param_num += 1;
+    }
+    let value_params = value_params.join(", ");
+    let query_string = format!("INSERT INTO todo_items (item) VALUES {}", value_params);
+    let mut query = sqlx::query(&query_string);
+
+    for item in items {
+        query = query.bind(item);
+    }
+
+    let connection = CONNECTION.try_lock().unwrap();
+
+    query.execute(&(*connection)).await?;
+
+    Ok(())
+}
+
+pub async fn edit_todos(id_and_item_pairs: &Vec<(u32, String)>) -> Result<()> {
     let mut param_num = 1;
     let mut value_params = Vec::new();
     for _ in 0..id_and_item_pairs.len() {
@@ -72,28 +94,6 @@ pub async fn edit_todos(id_and_item_pairs: Vec<(u32, String)>) -> Result<()> {
     }
 
     let connection = CONNECTION.try_lock().unwrap();
-    query.execute(&(*connection)).await?;
-
-    Ok(())
-}
-
-pub async fn add_todos(items: &Vec<String>) -> Result<()> {
-    let mut param_num = 1;
-    let mut value_params = Vec::new();
-    for _ in 0..items.len() {
-        value_params.push(format!("(${})", param_num));
-        param_num += 1;
-    }
-    let value_params = value_params.join(", ");
-    let query_string = format!("INSERT INTO todo_items (item) VALUES {}", value_params);
-    let mut query = sqlx::query(&query_string);
-
-    for item in items {
-        query = query.bind(item);
-    }
-
-    let connection = CONNECTION.try_lock().unwrap();
-
     query.execute(&(*connection)).await?;
 
     Ok(())
