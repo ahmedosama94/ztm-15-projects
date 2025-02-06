@@ -7,21 +7,22 @@ use derive_more::Display;
 
 mod db;
 
-#[derive(Clone, Debug, Parser, ValueEnum, Display)]
+#[derive(Clone, Debug, ValueEnum, Display)]
 enum SubCommand {
     Add,
     Done,
     Edit,
     List,
     Remove,
+    Clear,
 }
 
 #[derive(Debug, Parser)]
 pub struct Todo {
-    #[arg(value_name = "subcommand", default_value = "list")]
+    #[arg(value_enum, value_name = "subcommand", default_value = "list")]
     subcommand: SubCommand,
 
-    #[arg(value_name = "items", value_delimiter = ' ', num_args = 1..)]
+    #[arg(value_name = "items", num_args = 0..)]
     items: Vec<String>,
 }
 
@@ -29,6 +30,10 @@ impl Todo {
     pub async fn exec(&self) -> Result<TodoOutput> {
         match self.subcommand {
             SubCommand::Add => {
+                if self.items.is_empty() {
+                    panic!("No items passed to be added");
+                }
+
                 db::add_todos(&self.items).await?;
             }
             SubCommand::Edit => {
@@ -38,7 +43,7 @@ impl Todo {
 
                 let mut id_and_item_pairs = Vec::new();
 
-                for half_idx in 0..self.items.iter().len() {
+                for half_idx in 0..(self.items.iter().len() / 2) {
                     let idx = half_idx * 2;
 
                     let id = &self.items[idx];
