@@ -4,10 +4,11 @@ use todo::Todo;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenv::dotenv().ok();
     color_eyre::install()?;
 
     let cmd = Todo::parse();
-    println!("{}", cmd.exec()?);
+    println!("{}", cmd.exec().await?);
 
     Ok(())
 }
