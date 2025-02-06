@@ -1,6 +1,6 @@
 -- Add migration script here
 CREATE TABLE todo_items (
-  id INT PRIMARY KEY,
+  id INTEGER PRIMARY KEY,
   item VARCHAR NOT NULL,
   done_at DATETIME,
   deleted_at DATETIME,

@@ -19,7 +19,7 @@ async fn initialize_connection() -> Pool<Sqlite> {
             )
         })
         .create_if_missing(true)
-        .log_statements(LevelFilter::Debug);
+        .log_statements(LevelFilter::Trace);
 
     SqlitePool::connect_with(options)
         .await
