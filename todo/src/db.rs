@@ -1,8 +1,7 @@
-use async_mutex::{Mutex, MutexGuard};
 use log::LevelFilter;
-use std::{env, str::FromStr, thread};
+use std::{env, str::FromStr, sync::Arc, thread};
 
-use color_eyre::eyre::{OptionExt, Result};
+use color_eyre::eyre::Result;
 use lazy_static::lazy_static;
 use models::TodoItemRow;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, QueryBuilder, Sqlite, SqlitePool};
@@ -19,9 +18,9 @@ async fn initialize_connection() -> Result<Pool<Sqlite>> {
 }
 
 lazy_static! {
-    pub static ref CONNECTION: Mutex<Pool<Sqlite>> = {
+    pub static ref CONNECTION: Arc<Pool<Sqlite>> = {
         thread::spawn(|| {
-            Mutex::new(tokio::runtime::Runtime::new().unwrap().block_on(async {
+            Arc::new(tokio::runtime::Runtime::new().unwrap().block_on(async {
                 initialize_connection()
                     .await
                     .expect("Failed to initialize database connection")
@@ -58,7 +57,7 @@ pub async fn get_todos(ids: Option<&[u32]>) -> Result<Vec<TodoItemRow>> {
         sqlx::query_as(&query_str)
     };
 
-    let rows = query.fetch_all(&(*get_connection()?)).await?;
+    let rows = query.fetch_all(&(*get_connection())).await?;
 
     Ok(rows)
 }
@@ -76,11 +75,11 @@ pub async fn add_todos(items: &[String], returning: bool) -> Result<Option<Vec<T
 
     if returning {
         qb.push("RETURNING *");
-        let rows: Vec<TodoItemRow> = qb.build_query_as().fetch_all(&(*get_connection()?)).await?;
+        let rows: Vec<TodoItemRow> = qb.build_query_as().fetch_all(&(*get_connection())).await?;
 
         Ok(Some(rows))
     } else {
-        qb.build().execute(&(*get_connection()?)).await?;
+        qb.build().execute(&(*get_connection())).await?;
 
         Ok(None)
     }
@@ -101,7 +100,7 @@ pub async fn add_todos2(items: &[String]) -> Result<()> {
         query = query.bind(item);
     }
 
-    query.execute(&(*get_connection()?)).await?;
+    query.execute(&(*get_connection())).await?;
 
     Ok(())
 }
@@ -128,14 +127,14 @@ pub async fn edit_todos(id_and_item_pairs: &[(u32, String)]) -> Result<()> {
         query = query.bind(id).bind(item);
     }
 
-    query.execute(&(*get_connection()?)).await?;
+    query.execute(&(*get_connection())).await?;
 
     Ok(())
 }
 
 pub async fn clear_todos() -> Result<()> {
     sqlx::query("UPDATE todo_items SET deleted_at = datetime('now') WHERE deleted_at IS NULL")
-        .execute(&(*get_connection()?))
+        .execute(&(*get_connection()))
         .await?;
 
     Ok(())
@@ -157,7 +156,7 @@ pub async fn set_todos_done(ids: &[u32]) -> Result<()> {
         query = query.bind(id);
     }
 
-    query.execute(&(*get_connection()?)).await?;
+    query.execute(&(*get_connection())).await?;
 
     Ok(())
 }
@@ -181,13 +180,11 @@ pub async fn remove_todos(ids: &[u32]) -> Result<()> {
         query = query.bind(id);
     }
 
-    query.execute(&(*get_connection()?)).await?;
+    query.execute(&(*get_connection())).await?;
 
     Ok(())
 }
 
-fn get_connection() -> Result<MutexGuard<'static, Pool<Sqlite>>> {
-    CONNECTION
-        .try_lock()
-        .ok_or_eyre("Failed to obtain lock on connection mutex")
+fn get_connection() -> Arc<Pool<Sqlite>> {
+    Arc::clone(&CONNECTION)
 }
