@@ -5,7 +5,7 @@ use std::{env, str::FromStr, thread};
 use color_eyre::eyre::{OptionExt, Result};
 use lazy_static::lazy_static;
 use models::TodoItemRow;
-use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
+use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, QueryBuilder, Sqlite, SqlitePool};
 
 pub mod models;
 
@@ -63,7 +63,30 @@ pub async fn get_todos(ids: Option<&[u32]>) -> Result<Vec<TodoItemRow>> {
     Ok(rows)
 }
 
-pub async fn add_todos(items: &[String]) -> Result<()> {
+pub async fn add_todos(items: &[String], returning: bool) -> Result<Option<Vec<TodoItemRow>>> {
+    if items.is_empty() {
+        return Ok(Some(Vec::new()));
+    }
+
+    let mut qb: QueryBuilder<'_, Sqlite> = QueryBuilder::new("INSERT INTO todo_items (item)");
+
+    qb.push_values(items.iter(), |mut qb, item| {
+        qb.push_bind(item);
+    });
+
+    if returning {
+        qb.push("RETURNING *");
+        let rows: Vec<TodoItemRow> = qb.build_query_as().fetch_all(&(*get_connection()?)).await?;
+
+        Ok(Some(rows))
+    } else {
+        qb.build().execute(&(*get_connection()?)).await?;
+
+        Ok(None)
+    }
+}
+
+pub async fn add_todos2(items: &[String]) -> Result<()> {
     let mut param_num = 1;
     let mut value_params = Vec::new();
     for _ in 0..items.len() {

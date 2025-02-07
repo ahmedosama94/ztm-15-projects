@@ -76,10 +76,13 @@ impl Todo {
                     return Err(CliError::ArgsError("No items passed to be added").into());
                 }
 
-                db::add_todos(items).await?;
+                db::add_todos(items, false).await?;
             }
             SubCommand::Clear(_) => {
                 db::clear_todos().await?;
+                println!("{}", TodoOutput::new_empty());
+
+                return Ok(());
             }
             SubCommand::Done(DoneArgs { ids }) => {
                 if ids.is_empty() {
@@ -118,29 +121,21 @@ impl Todo {
 
                 db::edit_todos(&id_and_item_pairs).await?;
             }
-            SubCommand::List(ListArgs {}) => show_all().await?,
+            SubCommand::List(ListArgs {}) => {}
             SubCommand::Remove(RemoveArgs { ids }) => {
                 if ids.is_empty() {
                     return Err(CliError::ArgsError("No ids passed to remove").into());
                 }
 
                 db::remove_todos(ids).await?;
-
-                show_all().await?;
             }
         };
 
+        let rows = db::get_todos(None).await?;
+        println!("{}", TodoOutput::new(rows));
+
         Ok(())
     }
-}
-
-async fn show_all() -> Result<()> {
-    let rows = db::get_todos(None).await?;
-    let out = TodoOutput::new(rows);
-
-    println!("{}", out);
-
-    Ok(())
 }
 
 pub struct TodoOutput {
@@ -150,6 +145,10 @@ pub struct TodoOutput {
 impl TodoOutput {
     fn new(todos: Vec<TodoItemRow>) -> Self {
         Self { todos }
+    }
+
+    fn new_empty() -> Self {
+        Self::new(Vec::new())
     }
 }
 
