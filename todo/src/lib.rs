@@ -22,11 +22,11 @@ pub struct Todo {
 enum SubCommand {
     #[command()]
     Add(AddArgs),
+    Clear(ClearArgs),
     Done(DoneArgs),
     Edit(EditArgs),
     List(ListArgs),
     Remove(RemoveArgs),
-    Clear(ClearArgs),
 }
 
 #[derive(Args, Clone, Debug)]
@@ -35,6 +35,9 @@ struct AddArgs {
     #[arg(required = true, num_args = 1..)]
     items: Vec<String>,
 }
+
+#[derive(Args, Clone, Debug)]
+struct ClearArgs {}
 
 #[derive(Args, Clone, Debug)]
 #[command()]
@@ -57,9 +60,6 @@ struct RemoveArgs {
     #[arg()]
     ids: Vec<u32>,
 }
-
-#[derive(Args, Clone, Debug)]
-struct ClearArgs {}
 
 #[derive(Debug, Display)]
 enum CliError {
