@@ -1,9 +1,13 @@
-use std::fmt::Display;
+use std::{fmt::Display, iter};
 
 use clap::{Args, Parser, Subcommand};
-use color_eyre::eyre::Result;
+use color_eyre::{
+    eyre::{ContextCompat, Result},
+    owo_colors::OwoColorize,
+};
 use db::models::TodoItemRow;
 use derive_more::Display;
+use sqlx::types::chrono::Local;
 use std::error::Error;
 
 mod db;
@@ -49,39 +53,47 @@ struct EditArgs {
 struct ListArgs {}
 
 #[derive(Args, Clone, Debug)]
-struct RemoveArgs {}
+struct RemoveArgs {
+    #[arg()]
+    ids: Vec<u32>,
+}
 
 #[derive(Args, Clone, Debug)]
 struct ClearArgs {}
 
 #[derive(Debug, Display)]
 enum CliError {
-    ParseError(&'static str),
+    ArgsError(&'static str),
 }
 
 impl Error for CliError {}
 
 impl Todo {
-    pub async fn exec(&self) -> Result<TodoOutput> {
+    pub async fn exec(&self) -> Result<()> {
         match &self.subcommand {
             SubCommand::Add(AddArgs { items }) => {
                 if items.is_empty() {
-                    panic!("No items passed to be added");
+                    return Err(CliError::ArgsError("No items passed to be added").into());
                 }
 
                 db::add_todos(items).await?;
             }
             SubCommand::Clear(_) => {
-                todo!()
+                db::clear_todos().await?;
             }
             SubCommand::Done(DoneArgs { ids }) => {
                 if ids.is_empty() {
-                    panic!("No ids passed to set to done");
+                    return Err(CliError::ArgsError("No ids passed to be set to done").into());
                 }
+
+                db::set_todos_done(ids).await?;
             }
             SubCommand::Edit(EditArgs { items }) => {
                 if items.len() % 2 == 1 {
-                    panic!("The input has to be pairs of ids and todo items");
+                    return Err(CliError::ArgsError(
+                        "The input has to be pairs of ids and todo items",
+                    )
+                    .into());
                 }
 
                 let mut id_and_item_pairs = Vec::new();
@@ -92,7 +104,12 @@ impl Todo {
                     let id = &items[idx];
                     let id: u32 = match id.parse() {
                         Ok(id) => id,
-                        Err(_) => panic!("Could not parse id '{}'", id),
+                        Err(_) => {
+                            return Err(CliError::ArgsError(
+                                "The input has to be pairs of ids and todo items",
+                            )
+                            .into());
+                        }
                     };
                     let item = items[idx + 1].clone();
 
@@ -101,19 +118,29 @@ impl Todo {
 
                 db::edit_todos(&id_and_item_pairs).await?;
             }
-            SubCommand::List(_) => {}
-            SubCommand::Remove(_) => {
-                todo!()
-            }
-            _ => {
-                todo!();
+            SubCommand::List(ListArgs {}) => show_all().await?,
+            SubCommand::Remove(RemoveArgs { ids }) => {
+                if ids.is_empty() {
+                    return Err(CliError::ArgsError("No ids passed to remove").into());
+                }
+
+                db::remove_todos(ids).await?;
+
+                show_all().await?;
             }
         };
 
-        let rows = db::get_all_todos().await?;
-
-        Ok(TodoOutput::new(rows))
+        Ok(())
     }
+}
+
+async fn show_all() -> Result<()> {
+    let rows = db::get_todos(None).await?;
+    let out = TodoOutput::new(rows);
+
+    println!("{}", out);
+
+    Ok(())
 }
 
 pub struct TodoOutput {
@@ -132,10 +159,40 @@ impl Display for TodoOutput {
             return write!(f, "list is empty");
         }
 
-        writeln!(f, "{:<5}| {:<30}", "id", "item")?;
-        write!(f, "=====|=============================")?;
+        writeln!(
+            f,
+            " {:<5}| {:<30}| {:<30}| {:<30}",
+            "id", "item", "created at", "done at"
+        )?;
+        write!(
+            f,
+            "{}|{}|{}|{}",
+            "=".repeat(6),
+            "=".repeat(31),
+            "=".repeat(31),
+            "=".repeat(31)
+        )?;
         for todo in &self.todos {
-            write!(f, "\n{:<5}|{:<30}", todo.id(), todo.item())?;
+            let id = todo.id();
+            let item = todo.item();
+            let created_at = todo.created_at().with_timezone(&Local).to_rfc2822();
+            let done_at: Box<dyn Display> = if let Some(done_at) = todo.done_at() {
+                Box::new(done_at.with_timezone(&Local).to_rfc2822())
+            } else {
+                Box::new("")
+            };
+
+            let (id, item): (Box<dyn Display>, Box<dyn Display>) = if todo.is_done() {
+                (Box::new(id.strikethrough()), Box::new(item.strikethrough()))
+            } else {
+                (Box::new(id), Box::new(item))
+            };
+
+            write!(
+                f,
+                "\n {:<5}| {:<30}| {:<30}| {:<30}",
+                id, item, created_at, done_at,
+            )?;
         }
 
         Ok(())

@@ -8,7 +8,7 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
 
     let cmd = Todo::parse();
-    println!("{}", cmd.exec().await?);
+    cmd.exec().await?;
 
     Ok(())
 }
