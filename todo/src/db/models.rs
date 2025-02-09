@@ -4,30 +4,57 @@ use sqlx::{
 };
 
 #[derive(FromRow)]
-pub struct TodoItemRow {
+pub struct TodoListRow {
     id: u32,
-    item: String,
+    title: String,
+    deleted_at: Option<DateTime<Utc>>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+impl TodoListRow {
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
+    pub fn title(&self) -> &str {
+        &self.title
+    }
+
+    pub fn deleted_at(&self) -> Option<&DateTime<Utc>> {
+        self.deleted_at.as_ref()
+    }
+
+    pub fn created_at(&self) -> &DateTime<Utc> {
+        &self.created_at
+    }
+
+    pub fn updated_at(&self) -> &DateTime<Utc> {
+        &self.updated_at
+    }
+}
+
+#[derive(FromRow)]
+pub struct TodoListItemRow {
+    id: u32,
+    title: String,
     done_at: Option<DateTime<Utc>>,
     deleted_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
 
-impl TodoItemRow {
+impl TodoListItemRow {
     pub fn id(&self) -> u32 {
         self.id
     }
 
-    pub fn item(&self) -> &str {
-        &self.item
+    pub fn title(&self) -> &str {
+        &self.title
     }
 
     pub fn done_at(&self) -> Option<&DateTime<Utc>> {
-        if let Some(done_at) = &self.done_at {
-            Some(done_at)
-        } else {
-            None
-        }
+        self.done_at.as_ref()
     }
 
     pub fn is_done(&self) -> bool {
@@ -35,11 +62,7 @@ impl TodoItemRow {
     }
 
     pub fn deleted_at(&self) -> Option<&DateTime<Utc>> {
-        if let Some(deleted_at) = &self.deleted_at {
-            Some(deleted_at)
-        } else {
-            None
-        }
+        self.deleted_at.as_ref()
     }
 
     pub fn is_deleted(&self) -> bool {

@@ -1,14 +1,15 @@
 use clap::Parser;
 use color_eyre::Result;
-use todo::Todo;
+use todo::TodoCli;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv::dotenv().ok();
     color_eyre::install()?;
 
-    let cmd = Todo::parse();
-    cmd.exec().await?;
+    let cmd = TodoCli::parse();
+    let output = cmd.exec().await?;
+    println!("{}", output);
 
     Ok(())
 }
