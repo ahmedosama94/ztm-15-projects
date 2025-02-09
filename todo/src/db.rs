@@ -135,7 +135,6 @@ pub async fn edit_todo_list_items(
     qb.push("\nUPDATE todo_list_items SET title = (SELECT title FROM tmp WHERE todo_list_items.id = tmp.id)");
     qb.push("\nWHERE deleted_at IS NULL AND id IN (SELECT id FROM tmp) AND todo_list_id = ");
     qb.push_bind(todo_list_id);
-    qb.push(" RETURNING *");
 
     let query = qb.sql();
     println!("{}", query);
@@ -184,6 +183,46 @@ pub async fn remove_todo_list_items(todo_list_id: u32, ids: &[u32]) -> Result<()
     let mut separated = qb.separated(", ");
     for id in ids {
         separated.push_bind(id);
+    }
+    qb.push(")");
+
+    qb.build().execute(&(*get_connection())).await?;
+
+    Ok(())
+}
+
+pub async fn undo_todo_list_items(todo_list_id: u32, ids: &[u32]) -> Result<()> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+
+    let mut qb = QueryBuilder::new(
+        "UPDATE todo_list_items SET done_at = NULL WHERE deleted_at IS NULL AND done_at IS NULL AND todo_list_id = "
+    );
+    qb.push_bind(todo_list_id);
+    qb.push("AND id IN (");
+    for id in ids {
+        qb.push_bind(id);
+    }
+    qb.push(")");
+
+    qb.build().execute(&(*get_connection())).await?;
+
+    Ok(())
+}
+
+pub async fn restore_todo_list_items(todo_list_id: u32, ids: &[u32]) -> Result<()> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+
+    let mut qb = QueryBuilder::new(
+        "UPDATE todo_list_items SET deleted_at = NULL WHERE deleted_at IS NOT NULL AND todo_list_id = "
+    );
+    qb.push_bind(todo_list_id);
+    qb.push("AND id IN (");
+    for id in ids {
+        qb.push_bind(id);
     }
     qb.push(")");
 

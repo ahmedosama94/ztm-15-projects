@@ -28,7 +28,9 @@ enum SubCommand {
     Edit(EditArgs),
     List(ListArgs),
     Remove(RemoveArgs),
+    Restore(RestoreArgs),
     ShowLists(ShowListsArgs),
+    Undo(UndoArgs),
 }
 
 #[derive(Args, Clone, Debug)]
@@ -78,6 +80,14 @@ struct EditArgs {
 #[derive(Args, Clone, Debug)]
 #[command()]
 struct ListArgs {
+    #[arg(
+        short = 'a',
+        long = "all",
+        help = "List with deleted items",
+        default_value = "false"
+    )]
+    all: bool,
+
     #[arg(required = true)]
     todo_list_title: String,
 }
@@ -94,9 +104,29 @@ struct RemoveArgs {
 
 #[derive(Args, Clone, Debug)]
 #[command()]
+struct RestoreArgs {
+    #[arg(required = true)]
+    todo_list_title: String,
+
+    #[arg(required = true, num_args = 1..)]
+    ids: Vec<u32>,
+}
+
+#[derive(Args, Clone, Debug)]
+#[command()]
 struct ShowListsArgs {
     #[arg(short = 'd', default_value = "false")]
     with_deleted: bool,
+}
+
+#[derive(Args, Clone, Debug)]
+#[command()]
+struct UndoArgs {
+    #[arg(required = true)]
+    todo_list_title: String,
+
+    #[arg(required = true, num_args = 1..)]
+    ids: Vec<u32>,
 }
 
 #[derive(Debug, Display)]
@@ -121,7 +151,7 @@ impl TodoCli {
 
                 let added_rows = db::add_todo_list_items_returning(todo_list.id(), items).await?;
 
-                Ok(CliOutput::TodoItemsOutput(added_rows))
+                Ok(CliOutput::TodoItemsOutput(added_rows, false))
             }
             SubCommand::Clear(ClearArgs { todo_list_title }) => {
                 let todo_list = Self::try_get_todo_list_by_title(todo_list_title).await?;
@@ -162,7 +192,7 @@ impl TodoCli {
 
                 let rows = db::get_todo_list_items(todo_list.id(), false).await?;
 
-                Ok(CliOutput::TodoItemsOutput(rows))
+                Ok(CliOutput::TodoItemsOutput(rows, false))
             }
             SubCommand::Edit(EditArgs {
                 todo_list_title,
@@ -200,13 +230,16 @@ impl TodoCli {
                 let edited_rows =
                     db::edit_todo_list_items(todo_list.id(), &id_and_item_pairs).await?;
 
-                Ok(CliOutput::TodoItemsOutput(edited_rows))
+                Ok(CliOutput::TodoItemsOutput(edited_rows, false))
             }
-            SubCommand::List(ListArgs { todo_list_title }) => {
+            SubCommand::List(ListArgs {
+                all,
+                todo_list_title,
+            }) => {
                 let todo_list = Self::try_get_todo_list_by_title(todo_list_title).await?;
-                let rows = db::get_todo_list_items(todo_list.id(), false).await?;
+                let rows = db::get_todo_list_items(todo_list.id(), *all).await?;
 
-                Ok(CliOutput::TodoItemsOutput(rows))
+                Ok(CliOutput::TodoItemsOutput(rows, *all))
             }
             SubCommand::Remove(RemoveArgs {
                 todo_list_title,
@@ -222,12 +255,40 @@ impl TodoCli {
 
                 let rows = db::get_todo_list_items(todo_list.id(), false).await?;
 
-                Ok(CliOutput::TodoItemsOutput(rows))
+                Ok(CliOutput::TodoItemsOutput(rows, false))
+            }
+            SubCommand::Restore(RestoreArgs {
+                todo_list_title,
+                ids,
+            }) => {
+                let todo_list = Self::try_get_todo_list_by_title(todo_list_title).await?;
+
+                if ids.is_empty() {
+                    return Err(CliError::ArgsError("No ids passed to restore").into());
+                }
+
+                db::restore_todo_list_items(todo_list.id(), ids).await?;
+
+                let rows = db::get_todo_list_items(todo_list.id(), false).await?;
+
+                Ok(CliOutput::TodoItemsOutput(rows, false))
             }
             SubCommand::ShowLists(ShowListsArgs { with_deleted }) => {
                 let todo_lists = db::get_todo_lists(*with_deleted).await?;
 
                 Ok(CliOutput::TodoListsOutput(todo_lists))
+            }
+            SubCommand::Undo(UndoArgs {
+                todo_list_title,
+                ids,
+            }) => {
+                let todo_list = Self::try_get_todo_list_by_title(todo_list_title).await?;
+
+                db::undo_todo_list_items(todo_list.id(), ids).await?;
+
+                let rows = db::get_todo_list_items(todo_list.id(), false).await?;
+
+                Ok(CliOutput::TodoItemsOutput(rows, false))
             }
         }
     }
@@ -243,7 +304,7 @@ impl TodoCli {
 }
 
 pub enum CliOutput<'a> {
-    TodoItemsOutput(Vec<TodoListItemRow>),
+    TodoItemsOutput(Vec<TodoListItemRow>, bool),
     TodoListsOutput(Vec<TodoListRow>),
     TodoListCreatedOutput(&'a str),
     TodoListClearedOutput(&'a str),
@@ -252,7 +313,9 @@ pub enum CliOutput<'a> {
 impl Display for CliOutput<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::TodoItemsOutput(todo_list_items) => fmt_todo_list_items(todo_list_items, f),
+            Self::TodoItemsOutput(todo_list_items, with_deleted) => {
+                fmt_todo_list_items(todo_list_items, f, *with_deleted)
+            }
             Self::TodoListsOutput(todo_lists) => fmt_todo_lists(todo_lists, f),
             Self::TodoListCreatedOutput(title) => {
                 write!(f, "Created a new list '{}'", title)
@@ -282,16 +345,24 @@ fn fmt_todo_lists(todo_lists: &[TodoListRow], f: &mut std::fmt::Formatter<'_>) -
 fn fmt_todo_list_items(
     todo_list_items: &[TodoListItemRow],
     f: &mut std::fmt::Formatter<'_>,
+    with_deleted: bool,
 ) -> std::fmt::Result {
     if todo_list_items.is_empty() {
         return write!(f, "list is empty");
     }
 
-    writeln!(
+    write!(
         f,
         " {:<5}| {:<30}| {:<30}| {:<30}",
         "id", "item", "created at", "done at"
     )?;
+
+    if with_deleted {
+        write!(f, "| {:<30}", "deleted at")?;
+    }
+
+    writeln!(f)?;
+
     write!(
         f,
         "{}|{}|{}|{}",
@@ -300,12 +371,24 @@ fn fmt_todo_list_items(
         "=".repeat(31),
         "=".repeat(31)
     )?;
+
+    if with_deleted {
+        write!(f, "|{}", "=".repeat(31))?;
+    }
+
     for todo in todo_list_items {
         let id = todo.id();
         let title = todo.title();
         let created_at = todo.created_at().with_timezone(&Local).to_rfc2822();
+
         let done_at: Box<dyn Display> = if let Some(done_at) = todo.done_at() {
             Box::new(done_at.with_timezone(&Local).to_rfc2822())
+        } else {
+            Box::new("")
+        };
+
+        let deleted_at: Box<dyn Display> = if let Some(deleted_at) = todo.deleted_at() {
+            Box::new(deleted_at.with_timezone(&Local).to_rfc2822())
         } else {
             Box::new("")
         };
@@ -319,11 +402,21 @@ fn fmt_todo_list_items(
             (Box::new(id), Box::new(title))
         };
 
+        let (id, title): (Box<dyn Display>, Box<dyn Display>) = if todo.is_deleted() {
+            (Box::new(id.on_red()), Box::new(title.on_red()))
+        } else {
+            (id, title)
+        };
+
         write!(
             f,
             "\n {:<5}| {:<30}| {:<30}| {:<30}",
             id, title, created_at, done_at,
         )?;
+
+        if with_deleted {
+            write!(f, "| {:<30}", deleted_at)?;
+        }
     }
 
     Ok(())
